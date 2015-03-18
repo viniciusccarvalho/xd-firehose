@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:int-websocket="http://www.springframework.org/schema/integration/websocket"
+       xsi:schemaLocation="
+    http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/integration
+    http://www.springframework.org/schema/integration/spring-integration.xsd
+    http://www.springframework.org/schema/integration/websocket
+    http://www.springframework.org/schema/integration/websocket/spring-integration-websocket.xsd">
+
+    <bean id="byteBufferConverter" class="org.springframework.xd.firehose.ByteBufferMessageConverter"/>
+    <bean id="envelopeTransformer" class="org.springframework.xd.firehose.EnvelopeTransformer"/>
+    <bean id="websocketClient" class="org.springframework.web.socket.client.jetty.JettyWebSocketClient">
+        <constructor-arg>
+            <bean class="org.eclipse.jetty.websocket.client.WebSocketClient">
+                <constructor-arg>
+                    <bean class="org.eclipse.jetty.util.ssl.SslContextFactory">
+                        <constructor-arg value="true" type="boolean"/>
+                    </bean>
+                </constructor-arg>
+            </bean>
+
+        </constructor-arg>
+    </bean>
+
+
+
+    <int:channel id="byteChannel"/>
+
+    <int:transformer input-channel="byteChannel" output-channel="output" ref="envelopeTransformer"/>
+
+    <int:channel id="output"/>
+
+
+
+
+    <int-websocket:client-container id="wsContainer" client="websocketClient"
+                                    uri="${dopplerUrl}/firehose/firehose-a"
+                                    origin="http://localhost" auto-startup="true"
+
+            >
+        <int-websocket:http-headers>
+            <entry key="Authorization" value="${cfAccessToken}"/>
+
+        </int-websocket:http-headers>
+
+
+    </int-websocket:client-container>
+    <int-websocket:inbound-channel-adapter container="wsContainer" auto-startup="true" channel="byteChannel" message-converters="byteBufferConverter" payload-type="java.nio.ByteBuffer"/>
+</beans>
